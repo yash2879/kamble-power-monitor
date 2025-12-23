@@ -3,50 +3,63 @@
 
 <head>
     <title>Power Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             font-family: sans-serif;
             text-align: center;
-            padding-top: 50px;
+            background-color: #1a1a1a;
+            color: white;
+            padding: 20px;
         }
 
         #status-box {
-            padding: 50px;
-            border-radius: 20px;
-            display: inline-block;
+            padding: 40px;
+            border-radius: 15px;
+            margin-top: 20px;
             font-size: 2em;
-            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.5s ease;
         }
 
         .online {
             background-color: #27ae60;
+            box-shadow: 0 0 30px #27ae60;
         }
 
         .offline {
             background-color: #c0392b;
+            box-shadow: 0 0 30px #c0392b;
+        }
+
+        .loading {
+            background-color: #7f8c8d;
+        }
+
+        #time-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #bdc3c7;
+        }
+
+        #details {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #7f8c8d;
         }
     </style>
 </head>
 
 <body>
-    <h1>Home Power Status</h1>
-    <div id="status-box">Connecting...</div>
-    <p id="time-text"></p>
 
-    <p>Debug box for testing</p>
-    <div id="debug-box" style="border:1px solid black; padding:10px; margin-top:20px;">
-        <p class="debugnow">now</p>
-        <p class="debugheartbeat">from heartbeat</p>
-        <p class="debugdiff">diff</p>
-        <p class="debugparsednow">now formatted</p>
-        <p class="debughbparsed">hb formatted</p>
-        <p class="debugdiffparsed">diff formatted</p>
+    <h1>🏠 Gharachi Light</h1>
 
+    <div id="status-box" class="loading">Loading...</div>
 
+    <div id="time-text">Checking server...</div>
+    <div id="details"></div>
 
-    </div>
-
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -58,39 +71,60 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const statusRef = ref(db, 'status/last_seen');
 
-        onValue(statusRef, (snapshot) => {
-            const lastSeen = snapshot.val();
-            const statusBox = document.getElementById('status-box');
-            const timeText = document.getElementById('time-text');
+        // References
+        const lastSeenRef = ref(db, 'status/last_seen');
+        const offsetRef = ref(db, '.info/serverTimeOffset');
 
-            function updateUI() {
-                const now = Date.now();
-                document.querySelector('.debugnow').innerText = "Now: " + now;
-                document.querySelector('.debugheartbeat').innerText = "Heartbeat: " + lastSeen;
-                document.querySelector('.debugdiff').innerText = "Diff: " + (now - lastSeen);
-                document.querySelector('.debugparsednow').innerText = "Now Formatted: " + new Date(now).toLocaleString();
-                document.querySelector('.debughbparsed').innerText = "Heartbeat Formatted: " + new Date(lastSeen).toLocaleString();
-                document.querySelector('.debugdiffparsed').innerText = "Diff Formatted: " + new Date(now - lastSeen).toISOString().substr(11, 8);
+        let lastSeenTime = 0;
+        let serverOffset = 0;
 
+        // 1. Get the "Clock Skew" (Difference between your phone and Google)
+        onValue(offsetRef, (snap) => {
+            serverOffset = snap.val();
+        });
 
-                const diffSeconds = Math.round((now - lastSeen) / 1000);
+        // 2. Get the last heartbeat from ESP32
+        onValue(lastSeenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                lastSeenTime = snapshot.val();
+                updateUI();
+            }
+        });
 
-                if (diffSeconds < 60) { // If updated in last 90 seconds
-                    statusBox.innerText = "GHABRU NAKO LIGHT AHE";
-                    statusBox.className = "online";
-                } else {
-                    statusBox.innerText = "geli VaPaS llight";
-                    statusBox.className = "offline";
-                }
-                timeText.innerText = "Last heartbeat: " + diffSeconds + " seconds ago";
+        const statusBox = document.getElementById('status-box');
+        const timeText = document.getElementById('time-text');
+        const details = document.getElementById('details');
+
+        function updateUI() {
+            if (lastSeenTime === 0) return;
+
+            // CORRECT MATH: (YourTime + OffsetError) - LastSeen
+            const estimatedServerTime = Date.now() + serverOffset;
+            let diffSeconds = Math.floor((estimatedServerTime - lastSeenTime) / 1000);
+
+            // Cosmetic fix: If it's -1 or -2 due to lag, just show 0
+            if (diffSeconds < 0) diffSeconds = 0;
+
+            // Logic: If ESP32 hasn't spoken in 70 seconds, it's dead.
+            // (We use 70s because your loop is 10s + network delay)
+            if (diffSeconds < 70) {
+                statusBox.innerText = "LIGHT AHE 😎";
+                statusBox.className = "online";
+                statusBox.style.color = "white";
+            } else {
+                statusBox.innerText = "LIGHT GELI 🕯️";
+                statusBox.className = "offline";
             }
 
-            updateUI();
-            setInterval(updateUI, 5000); // Update the "seconds ago" every 5s
-        });
+            timeText.innerText = `Last Heartbeat: ${diffSeconds} seconds ago`;
+            details.innerText = `Last seen: ${new Date(lastSeenTime).toLocaleTimeString()}`;
+        }
+
+        // Run the UI update every second to make the counter tick
+        setInterval(updateUI, 1000);
     </script>
+
 </body>
 
 </html>
