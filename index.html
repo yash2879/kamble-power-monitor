@@ -37,6 +37,13 @@
     <div id="debug-box" style="border:1px solid black; padding:10px; margin-top:20px;">
         <p class="debugnow">now</p>
         <p class="debugheartbeat">from heartbeat</p>
+        <p class="debugdiff">diff</p>
+        <p class="debugparsednow">now formatted</p>
+        <p class="debughbparsed">hb formatted</p>
+        <p class="debugdiffparsed">diff formatted</p>
+
+
+
     </div>
 
     <!-- Firebase SDKs -->
@@ -62,6 +69,11 @@
                 const now = Date.now();
                 document.querySelector('.debugnow').innerText = "Now: " + now;
                 document.querySelector('.debugheartbeat').innerText = "Heartbeat: " + lastSeen;
+                document.querySelector('.debugdiff').innerText = "Diff: " + (now - lastSeen);
+                document.querySelector('.debugparsednow').innerText = "Now Formatted: " + new Date(now).toLocaleString();
+                document.querySelector('.debughbparsed').innerText = "Heartbeat Formatted: " + new Date(lastSeen).toLocaleString();
+                document.querySelector('.debugdiffparsed').innerText = "Diff Formatted: " + new Date(now - lastSeen).toISOString().substr(11, 8);
+
 
                 const diffSeconds = Math.round((now - lastSeen) / 1000);
 
