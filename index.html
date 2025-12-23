@@ -33,6 +33,12 @@
     <div id="status-box">Connecting...</div>
     <p id="time-text"></p>
 
+    <p>Debug box for testing</p>
+    <div id="debug-box" style="border:1px solid black; padding:10px; margin-top:20px;">
+        <p class="debugnow">now</p>
+        <p class="debugheartbeat">from heartbeat</p>
+    </div>
+
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -54,6 +60,9 @@
 
             function updateUI() {
                 const now = Date.now();
+                document.querySelector('.debugnow').innerText = "Now: " + now;
+                document.querySelector('.debugheartbeat').innerText = "Heartbeat: " + lastSeen;
+
                 const diffSeconds = Math.round((now - lastSeen) / 1000);
 
                 if (diffSeconds < 60) { // If updated in last 90 seconds
