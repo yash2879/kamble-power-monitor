@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Power Monitor</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+
+        #status-box {
+            padding: 50px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 2em;
+            color: white;
+        }
+
+        .online {
+            background-color: #27ae60;
+        }
+
+        .offline {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Home Power Status</h1>
+    <div id="status-box">Connecting...</div>
+    <p id="time-text"></p>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            databaseURL: "YOUR_DATABASE_URL",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const statusRef = ref(db, 'status/last_seen');
+
+        onValue(statusRef, (snapshot) => {
+            const lastSeen = snapshot.val();
+            const statusBox = document.getElementById('status-box');
+            const timeText = document.getElementById('time-text');
+
+            function updateUI() {
+                const now = Date.now();
+                const diffSeconds = Math.round((now - lastSeen) / 1000);
+
+                if (diffSeconds < 90) { // If updated in last 90 seconds
+                    statusBox.innerText = "POWER IS ON";
+                    statusBox.className = "online";
+                } else {
+                    statusBox.innerText = "POWER IS OUT";
+                    statusBox.className = "offline";
+                }
+                timeText.innerText = "Last heartbeat: " + diffSeconds + " seconds ago";
+            }
+
+            updateUI();
+            setInterval(updateUI, 5000); // Update the "seconds ago" every 5s
+        });
+    </script>
+</body>
+
+</html>
